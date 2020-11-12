@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <stdlib.h>
 
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -25,12 +26,13 @@ float nmsThreshold = 0.4;  // Non-maximum suppression threshold
 int inpWidth = 416;  // Width of network's input image
 int inpHeight = 416; // Height of network's input image
 vector<string> classes;
+vector<string> foundclasses;
 
 // Remove the bounding boxes with low confidence using non-maxima suppression
 void postprocess(Mat& frame, const vector<Mat>& out);
 
 // Draw the predicted bounding box
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame);
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, vector<string> & foundclasses);
 
 // Get the names of the output layers
 vector<String> getOutputsNames(const Net& net);
@@ -45,14 +47,14 @@ int main(int argc, char** argv)
         return 0;
     }
     // Load names of classes
-    string classesFile = "C:/Users/micha/source/repos/codefromscratch/codefromscratch/coco.names";
+    string classesFile = "C:/Users/micha/OneDrive/Desktop/Fall\ 2020/Untitled\ Folder/coco/coco.names";
     ifstream ifs(classesFile.c_str());
     string line;
     while (getline(ifs, line)) classes.push_back(line);
 
     // Give the configuration and weight files for the model
-    String modelConfiguration = "C:/Users/micha/source/repos/codefromscratch/codefromscratch/yolov3.cfg";
-    String modelWeights = "C:/Users/micha/source/repos/codefromscratch/codefromscratch/cocoyolov3.weights.txt";
+    String modelConfiguration = "C:/Users/micha/OneDrive/Desktop/darknet/cfg/yolov3.cfg";
+    String modelWeights = "C:/Users/micha/OneDrive/Desktop/darknet/yolov3.weights";
 
     // Load the network
     Net net = readNetFromDarknet(modelConfiguration, modelWeights);
@@ -68,20 +70,20 @@ int main(int argc, char** argv)
     try {
 
         outputFile = "yolo_out_cpp.avi";
-        if (parser.has("image"))
+        //if (parser.has("busystreet.jpg"))
         {
             // Open the image file
-            str = parser.get<String>("image");
+            str = "busystreet.jpg";
             ifstream ifile(str);
             if (!ifile) throw("error");
             cap.open(str);
             str.replace(str.end() - 4, str.end(), "_yolo_out_cpp.jpg");
             outputFile = str;
         }
-        else if (parser.has("video"))
+      /* // if (parser.has("video"))
         {
             // Open the video file
-            str = parser.get<String>("video");
+            str = "768x576.avi";
             ifstream ifile(str);
             if (!ifile) throw("error");
             cap.open(str);
@@ -89,7 +91,7 @@ int main(int argc, char** argv)
             outputFile = str;
         }
         // Open the webcaom
-        else cap.open(parser.get<int>("device"));
+       /* else cap.open(parser.get<int>("device"));*/
 
     }
     catch (...) {
@@ -116,6 +118,11 @@ int main(int argc, char** argv)
         if (frame.empty()) {
             cout << "Done processing !!!" << endl;
             cout << "Output file is stored as " << outputFile << endl;
+           //prints out all the items found
+            for (int i = 0; i < foundclasses.size(); i++) //printing out the names
+                std::cout << foundclasses[i] << ' ';
+
+            std::cout<<"done";
             waitKey(3000);
             break;
         }
@@ -149,8 +156,18 @@ int main(int argc, char** argv)
 
     }
 
+
     cap.release();
     if (!parser.has("image")) video.release();
+
+    
+
+    /*for (string i : theNames)
+    {
+        if (i == "dog") cout << "found dog";
+    }*/
+
+    
 
     return 0;
 }
@@ -200,15 +217,15 @@ void postprocess(Mat& frame, const vector<Mat>& outs)
         int idx = indices[i];
         Rect box = boxes[idx];
         drawPred(classIds[idx], confidences[idx], box.x, box.y,
-            box.x + box.width, box.y + box.height, frame);
+            box.x + box.width, box.y + box.height, frame, foundclasses);
     }
 }
 
 // Draw the predicted bounding box
-void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame)
+void drawPred(int classId, float conf, int left, int top, int right, int bottom, Mat& frame, vector<string> & foundclasses)
 {
     //Draw a rectangle displaying the bounding box
-    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(255, 178, 50), 3);
+    rectangle(frame, Point(left, top), Point(right, bottom), Scalar(255, 178, 233), 3);
 
     //Get the label for the class name and its confidence
     string label = format("%.2f", conf);
@@ -216,6 +233,7 @@ void drawPred(int classId, float conf, int left, int top, int right, int bottom,
     {
         CV_Assert(classId < (int)classes.size());
         label = classes[classId] + ":" + label;
+        foundclasses.push_back(classes[classId]);
     }
 
     //Display the label at the top of the bounding box

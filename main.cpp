@@ -16,9 +16,13 @@ const char* keys =
 "{image i        |<none>| input image   }"
 "{video v       |<none>| input video   }"
 ;
+
+
 using namespace cv;
 using namespace dnn;
 using namespace std;
+
+
 
 // Initialize the parameters
 float confThreshold = 0.5; // Confidence threshold
@@ -27,6 +31,9 @@ int inpWidth = 416;  // Width of network's input image
 int inpHeight = 416; // Height of network's input image
 vector<string> classes;
 vector<string> foundclasses;
+ofstream outpt;
+
+
 
 // Remove the bounding boxes with low confidence using non-maxima suppression
 void postprocess(Mat& frame, const vector<Mat>& out);
@@ -39,6 +46,8 @@ vector<String> getOutputsNames(const Net& net);
 
 int main(int argc, char** argv)
 {
+    
+
     CommandLineParser parser(argc, argv, keys);
     parser.about("Use this script to run object detection using YOLO3 in OpenCV.");
     if (parser.has("help"))
@@ -66,12 +75,14 @@ int main(int argc, char** argv)
     VideoCapture cap;
     VideoWriter video;
     Mat frame, blob;
+    int deviceID = 0;
+    int apiID = cv::CAP_ANY; 
 
     try {
 
         outputFile = "yolo_out_cpp.avi";
         //if (parser.has("busystreet.jpg"))
-        {
+       /* {
             // Open the image file
             str = "busystreet.jpg";
             ifstream ifile(str);
@@ -80,18 +91,18 @@ int main(int argc, char** argv)
             str.replace(str.end() - 4, str.end(), "_yolo_out_cpp.jpg");
             outputFile = str;
         }
-      /* // if (parser.has("video"))
-        {
+       // if (parser.has("video"))
+      /*  {
             // Open the video file
-            str = "768x576.avi";
+            str = "dogs.mp4";
             ifstream ifile(str);
             if (!ifile) throw("error");
             cap.open(str);
             str.replace(str.end() - 4, str.end(), "_yolo_out_cpp.avi");
             outputFile = str;
-        }
+        }*/
         // Open the webcaom
-       /* else cap.open(parser.get<int>("device"));*/
+         cap.open(deviceID,apiID);
 
     }
     catch (...) {
@@ -132,12 +143,20 @@ int main(int argc, char** argv)
         //Sets the input to the network
         net.setInput(blob);
 
-        // Runs the forward pass to get output of the output layers
         vector<Mat> outs;
         net.forward(outs, getOutputsNames(net));
 
         // Remove the bounding boxes with low confidence
         postprocess(frame, outs);
+
+        //pass info found into file
+        outpt.open("foundorNot.txt",ios_base::app);
+        for (string i : foundclasses)
+            outpt << i << endl;
+
+        
+
+        //if dog is found send "dog is eeens in your back
 
         // Put efficiency information. The function getPerfProfile returns the overall time for inference(t) and the timings for each of the layers(in layersTimes)
         vector<double> layersTimes;
@@ -155,6 +174,8 @@ int main(int argc, char** argv)
         imshow(kWinName, frame);
 
     }
+
+    outpt.close();
 
 
     cap.release();
